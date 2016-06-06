@@ -27,8 +27,11 @@ var options = function () {
     var onBeforeRequest = [];
     this.addOnBeforeRequest = function (method) {
         if (!method) return;
-        if (_.isFunction(method) && onBeforeRequest.indexOf(method) < 0)
-            onBeforeRequest.push(method);
+        if (!Array.isArray(method)) method = [method];
+        method.forEach(function (method) {
+            if (_.isFunction(method) && onBeforeRequest.indexOf(method) < 0)
+                onBeforeRequest.push(method);
+        });
     }
     this._getOnBeforeRequest = function () {
         return onBeforeRequest;
@@ -38,8 +41,11 @@ var options = function () {
     var onRequest = [];
     this.addOnRequest = function (method) {
         if (!method) return;
-        if (_.isFunction(method) && onRequest.indexOf(method) < 0)
-            onRequest.push(method);
+        if (!Array.isArray(method)) method = [method];
+        method.forEach(function (method) {
+            if (_.isFunction(method) && onRequest.indexOf(method) < 0)
+                onRequest.push(method);
+        });
     }
     this._getOnRequest = function () {
         return onRequest;
@@ -48,8 +54,11 @@ var options = function () {
     var onResponse = [];
     this.addOnResponse = function (method) {
         if (!method) return;
-        if (_.isFunction(method) && onResponse.indexOf(method) < 0)
-            onResponse.push(method);
+        if (!Array.isArray(method)) method = [method];
+        method.forEach(function (method) {
+            if (_.isFunction(method) && onResponse.indexOf(method) < 0)
+                onResponse.push(method);
+        });
     }
     this._getOnResponse = function () {
         return onResponse;

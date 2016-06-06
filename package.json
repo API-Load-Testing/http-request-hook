@@ -1,6 +1,6 @@
 {
   "name": "http-request-hook",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Hook nodes default http, https request method, to add extra administrative functionality",
   "main": "http_request_options.js",
   "scripts": {
