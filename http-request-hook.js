@@ -4,6 +4,8 @@ var _ = require('lodash');
 var http = require('http');
 var https = require('https');
 var url = require('url');
+var util         = require("util");
+var EventEmitter = require("events").EventEmitter;
 var NodeDefaultMethods = {};
 
 var verify = {
@@ -22,55 +24,10 @@ var verify = {
 
 var options = function () {
 
+    EventEmitter.call(this);
+    var thisObject = this;
+
     this.timeout = 120000;
-
-    var onBeforeRequest = [];
-    this.addOnBeforeRequest = function (method) {
-        if (!method) return;
-        if (!Array.isArray(method)) method = [method];
-        method.forEach(function (method) {
-            if (_.isFunction(method) && onBeforeRequest.indexOf(method) < 0)
-                onBeforeRequest.push(method);
-        });
-    }
-    this._getOnBeforeRequest = function () {
-        return onBeforeRequest;
-    }
-
-
-    var onRequest = [];
-    this.addOnRequest = function (method) {
-        if (!method) return;
-        if (!Array.isArray(method)) method = [method];
-        method.forEach(function (method) {
-            if (_.isFunction(method) && onRequest.indexOf(method) < 0)
-                onRequest.push(method);
-        });
-    }
-    this._getOnRequest = function () {
-        return onRequest;
-    }
-
-    var onResponse = [];
-    this.addOnResponse = function (method) {
-        if (!method) return;
-        if (!Array.isArray(method)) method = [method];
-        method.forEach(function (method) {
-            if (_.isFunction(method) && onResponse.indexOf(method) < 0)
-                onResponse.push(method);
-        });
-    }
-    this._getOnResponse = function () {
-        return onResponse;
-    }
-
-    this.on = function (eventName, method) {
-        if (!method) return;
-        if (!_.isFunction(method)) return;
-        if (_.toUpper(eventName) === 'ONREQUEST') this.addOnRequest(method);
-        else if (_.toUpper(eventName) === 'ONRESPONSE') this.addOnResponse(method);
-    }
-
 
     this.Blacklist = [];
     this.addBlacklist = function (address) {
@@ -119,6 +76,8 @@ function ApplyAdvanceOptions(moduleObj, userOptions) {
     // We proxy the request method
     moduleObj.request = function (options, callback) {
 
+        userOptions.emit('beforeRequest', options, callback);
+
         //BlackList Control
         var myPath = options;
         if (_.isString(options)) {
@@ -139,32 +98,29 @@ function ApplyAdvanceOptions(moduleObj, userOptions) {
                 userOptions.Whitelist.indexOf(myPath.pathname) >= 0)) return {ErrorMessage: options + ' is restricted'};
         }
 
-        // run onBeforeRequest event listeners
-        userOptions._getOnBeforeRequest().forEach(function (method) {
-            method.call(this, options);
-        });
-
-
         // Create the callback function for response
         var newCallback = function () {
 
             var res = arguments[0];
-            // run onResponse event listeners
-            userOptions._getOnResponse().forEach(function (method) {
-                method.call(this, req, res);
-            });
+
+            userOptions.emit('response', req, res);
 
             if (callback) callback.apply(this, arguments);
+
+            res.on('end', function() {
+                userOptions.emit('afterResponse', req, res);
+                userOptions.emit('responseEnd', req, res);
+            })
+
+
         }
 
 
         // do the request and emmit onRequest event
         var req = originalRequest(options, newCallback);
         req.setTimeout(userOptions.timeout);
-        // run onResponse event listeners
-        userOptions._getOnRequest().forEach(function (method) {
-            method.call(this, req, options);
-        });
+
+        userOptions.emit('request', req, options);
 
         return req;
     }
@@ -177,14 +133,17 @@ function ApplyAdvanceOptions(moduleObj, userOptions) {
 function restoreDefault() {
 
     if (http.upgradedToAdvanced) {
-        http.request = NodeDefaultMethods.httpRequest;
         delete http.upgradedToAdvanced;
+        http.request = NodeDefaultMethods.httpRequest;
     }
     if (https.upgradedToAdvanced) {
-        https.request = NodeDefaultMethods.httpsRequest;
         delete https.upgradedToAdvanced;
+        https.request = NodeDefaultMethods.httpsRequest;
     }
 }
+
+
+util.inherits(options, EventEmitter);
 
 
 module.exports.options = options;

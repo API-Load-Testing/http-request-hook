@@ -1,8 +1,9 @@
 {
   "name": "http-request-hook",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "description": "Hook nodes default http, https request method, to add extra administrative functionality",
-  "main": "http_request_options.js",
+  "Attention": "Major Changes happend on event handling and new events added, but as its in testing period the major version number didnt change",
+  "main": "http-request-hook.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
