@@ -1,6 +1,6 @@
 {
   "name": "http-request-hook",
-  "version": "0.4.0",
+  "version": "0.6.14",
   "description": "Hook nodes default http, https request method, to add extra administrative functionality",
   "Attention": "Major Changes happend on event handling and new events added, but as its in testing period the major version number didnt change",
   "main": "http-request-hook.js",
@@ -16,8 +16,5 @@
   "bugs": {
     "url": "https://github.com/API-Load-Testing/http-request-hook/issues"
   },
-  "homepage": "https://github.com/API-Load-Testing/http-request-hook#readme",
-  "dependencies": {
-    "lodash": "^4.13.1"
-  }
+  "homepage": "https://github.com/API-Load-Testing/http-request-hook#readme"
 }

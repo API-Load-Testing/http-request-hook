@@ -1,21 +1,23 @@
 'use strict';
 
-var _ = require('lodash');
 var http = require('http');
 var https = require('https');
-var url = require('url');
-var util         = require("util");
-var EventEmitter = require("events").EventEmitter;
+const url = require('url');
+const util         = require("util");
+const EventEmitter = require("events").EventEmitter;
 var NodeDefaultMethods = {};
+class MyEmitter extends EventEmitter {}
+const noop = function () {};
+
 
 var verify = {
     method: function (fn) {
-        if (!_.isFunction(fn)) {
+        if (!util.isFunction(fn)) {
             throw new Error('method should be a function, have ' + fn);
         }
     },
     string: function (str) {
-        if (!_.isString(str)) {
+        if (!util.isString(str)) {
             throw new Error('expected string value, have ' + str);
         }
     }
@@ -27,8 +29,12 @@ var options = function () {
     EventEmitter.call(this);
     var thisObject = this;
 
-    this.timeout = 120000;
+    this.requestQuery = function(options, callback) {
+        return true;
+    }
 
+    this.timeout = 120000;
+    this.resCallback = true;
     this.Blacklist = [];
     this.addBlacklist = function (address) {
 
@@ -57,6 +63,7 @@ var options = function () {
     };
 
 }  // options
+util.inherits(options, EventEmitter);
 
 
 function saveNodeDefaults() {
@@ -77,10 +84,25 @@ function ApplyAdvanceOptions(moduleObj, userOptions) {
     moduleObj.request = function (options, callback) {
 
         userOptions.emit('beforeRequest', options, callback);
+        var requsetQueryResult = userOptions.requestQuery(options, callback);
+
+        if (requsetQueryResult === 5) {  // 5 --> throw error
+            throw new Error('request not allowed');
+        } else if (!requsetQueryResult) {  // false --> just exit with empty object
+            const fakeReq = new MyEmitter();
+            fakeReq.abort = noop;
+            fakeReq.end = noop;
+            fakeReq.flushHeaders = noop;
+            fakeReq.setNoDelay = noop;
+            fakeReq.setSocketKeepAlive = noop;
+            fakeReq.setTimeout = noop;
+            fakeReq.write = noop;
+            return fakeReq;
+        }
 
         //BlackList Control
         var myPath = options;
-        if (_.isString(options)) {
+        if (util.isString(options)) {
             myPath = url.Parse(options);
             if (useroptions.Blacklist.indexOf(options) >= 0) return {ErrorMessage: options + ' is restricted'};
         }
@@ -90,7 +112,7 @@ function ApplyAdvanceOptions(moduleObj, userOptions) {
 
         //WhiteList Control
         if (userOptions.Whitelist.length > 0) {
-            if (_.isString(options)) {
+            if (util.isString(options)) {
                 myPath = url.Parse(options);
                 if (useroptions.Whitelist.indexOf(options) < 0) return {ErrorMessage: options + ' is restricted'};
             }
@@ -105,13 +127,11 @@ function ApplyAdvanceOptions(moduleObj, userOptions) {
 
             userOptions.emit('response', req, res);
 
-            if (callback) callback.apply(this, arguments);
+            if (callback && userOptions.resCallback) callback.apply(this, arguments);
 
             res.on('end', function() {
                 userOptions.emit('afterResponse', req, res);
-                userOptions.emit('responseEnd', req, res);
-            })
-
+            });
 
         }
 
@@ -119,6 +139,10 @@ function ApplyAdvanceOptions(moduleObj, userOptions) {
         // do the request and emmit onRequest event
         var req = originalRequest(options, newCallback);
         req.setTimeout(userOptions.timeout);
+
+        req.on('error', function (e) {
+            userOptions.emit('error', req, e);
+        });
 
         userOptions.emit('request', req, options);
 
@@ -142,8 +166,6 @@ function restoreDefault() {
     }
 }
 
-
-util.inherits(options, EventEmitter);
 
 
 module.exports.options = options;
